@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/validation"
 
-	"github.com/chanzuckerberg/terraform-provider-snowflake/pkg/snowflake"
+	"github.com/viostream/terraform-provider-snowflake/pkg/snowflake"
 )
 
 var validDatabasePrivileges = []string{
@@ -89,6 +89,12 @@ func ReadDatabaseGrant(data *schema.ResourceData, meta interface{}) error {
 	err = data.Set("privilege", priv)
 	if err != nil {
 		return err
+	}
+
+	// IMPORTED PRIVILEGES is not a real resource, so we can't actually verify
+	// that it is still there. Just exit for now
+	if priv == "IMPORTED PRIVILEGES" {
+		return nil
 	}
 
 	builder := snowflake.DatabaseGrant(dbName)

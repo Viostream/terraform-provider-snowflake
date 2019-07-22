@@ -11,9 +11,9 @@ import (
 
 	"github.com/hashicorp/terraform/helper/schema"
 
-	"github.com/chanzuckerberg/terraform-provider-snowflake/pkg/provider"
-	"github.com/chanzuckerberg/terraform-provider-snowflake/pkg/resources"
-	. "github.com/chanzuckerberg/terraform-provider-snowflake/pkg/testhelpers"
+	"github.com/viostream/terraform-provider-snowflake/pkg/provider"
+	"github.com/viostream/terraform-provider-snowflake/pkg/resources"
+	. "github.com/viostream/terraform-provider-snowflake/pkg/testhelpers"
 )
 
 func TestDatabaseGrant(t *testing.T) {
@@ -41,6 +41,25 @@ func TestDatabaseGrantCreate(t *testing.T) {
 		mock.ExpectExec(`^GRANT USAGE ON DATABASE "test-database" TO SHARE "test-share-2"$`).WillReturnResult(sqlmock.NewResult(1, 1))
 		expectReadDatabaseGrant(mock)
 		err := resources.CreateDatabaseGrant(d, db)
+		a.NoError(err)
+	})
+}
+
+func TestDatabaseGrantRead(t *testing.T) {
+	a := assert.New(t)
+
+	d := databaseGrant(t, "test-database|||IMPORTED PRIVILIGES", map[string]interface{}{
+		"database_name": "test-database",
+		"privilege":     "IMPORTED PRIVILIGES",
+		"roles":         []string{"test-role-1", "test-role-2"},
+		"shares":        []string{"test-share-1", "test-share-2"},
+	})
+
+	a.NotNil(d)
+
+	WithMockDb(t, func(db *sql.DB, mock sqlmock.Sqlmock) {
+		expectReadDatabaseGrant(mock)
+		err := resources.ReadDatabaseGrant(d, db)
 		a.NoError(err)
 	})
 }
