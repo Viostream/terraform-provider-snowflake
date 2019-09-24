@@ -9,7 +9,23 @@ import (
 	"github.com/viostream/terraform-provider-snowflake/pkg/snowflake"
 )
 
-var validSchemaPrivileges = []string{"USAGE"}
+// Intentionally exclude the "ALL" alias because it is not a real privilege and
+// might not interact well with this provider.
+var validSchemaPrivileges = []string{
+	"MODIFY",
+	"MONITOR",
+	"USAGE",
+	"CREATE TABLE",
+	"CREATE VIEW",
+	"CREATE FILE FORMAT",
+	"CREATE STAGE",
+	"CREATE PIPE",
+	"CREATE STREAM",
+	"CREATE TASK",
+	"CREATE SEQUENCE",
+	"CREATE FUNCTION",
+	"CREATE PROCEDURE",
+}
 
 var schemaGrantSchema = map[string]*schema.Schema{
 	"schema_name": &schema.Schema{
@@ -29,7 +45,7 @@ var schemaGrantSchema = map[string]*schema.Schema{
 		Optional:     true,
 		Description:  "The privilege to grant on the schema.",
 		Default:      "USAGE",
-		ValidateFunc: validation.StringInSlice(validViewPrivileges, true),
+		ValidateFunc: validation.StringInSlice(validSchemaPrivileges, true),
 		ForceNew:     true,
 	},
 	"roles": &schema.Schema{
@@ -101,7 +117,7 @@ func ReadSchemaGrant(data *schema.ResourceData, meta interface{}) error {
 
 	builder := snowflake.SchemaGrant(db, schema)
 
-	return readGenericGrant(data, meta, builder)
+	return readGenericGrant(data, meta, builder, false)
 }
 
 // DeleteSchemaGrant implements schema.DeleteFunc

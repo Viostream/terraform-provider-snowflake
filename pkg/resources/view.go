@@ -107,8 +107,8 @@ func ReadView(data *schema.ResourceData, meta interface{}) error {
 	q := snowflake.View(view).WithDB(dbName).WithSchema(schema).Show()
 	row := db.QueryRow(q)
 	var createdOn, name, reserved, databaseName, schemaName, owner, comment, text sql.NullString
-	var isSecure bool
-	err = row.Scan(&createdOn, &name, &reserved, &databaseName, &schemaName, &owner, &comment, &text, &isSecure)
+	var isSecure, isMaterialized bool
+	err = row.Scan(&createdOn, &name, &reserved, &databaseName, &schemaName, &owner, &comment, &text, &isSecure, &isMaterialized)
 	if err != nil {
 		return err
 	}
@@ -233,6 +233,7 @@ func ViewExists(data *schema.ResourceData, meta interface{}) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	defer rows.Close()
 
 	if rows.Next() {
 		return true, nil

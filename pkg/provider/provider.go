@@ -60,6 +60,7 @@ func Provider() *schema.Provider {
 			"snowflake_user":             resources.User(),
 			"snowflake_view":             resources.View(),
 			"snowflake_view_grant":       resources.ViewGrant(),
+			"snowflake_table_grant":      resources.TableGrant(),
 			"snowflake_warehouse":        resources.Warehouse(),
 			"snowflake_warehouse_grant":  resources.WarehouseGrant(),
 		},
@@ -96,7 +97,17 @@ func DSN(s *schema.ResourceData) (string, error) {
 	var auth gosnowflake.AuthType
 
 	if browserAuth {
+<<<<<<< HEAD
 		auth = gosnowflake.AuthTypeExternalBrowser
+=======
+		dsn, err = gosnowflake.DSN(&gosnowflake.Config{
+			Account:       account,
+			User:          username,
+			Region:        region,
+			Role:          role,
+			Authenticator: gosnowflake.AuthTypeExternalBrowser,
+		})
+>>>>>>> 706b523e0099dedd04664f5a6ac1ed92d6e7b51a
 	}
 
 	return gosnowflake.DSN(&gosnowflake.Config{

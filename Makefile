@@ -2,21 +2,31 @@ SHA=$(shell git rev-parse --short HEAD)
 VERSION=$(shell cat VERSION)
 DIRTY=$(shell if `git diff-index --quiet HEAD --`; then echo false; else echo true;  fi)
 # TODO add release flag
+<<<<<<< HEAD
 LDFLAGS=-ldflags "-w -s -X github.com/viostream/terraform-provider-snowflake/util.GitSha=${SHA} -X github.com/viostream/terraform-provider-snowflake/util.Version=${VERSION} -X github.com/viostream/terraform-provider-snowflake/util.Dirty=${DIRTY}"
 GOTEST=go test
+=======
+LDFLAGS=-ldflags "-w -s -X github.com/chanzuckerberg/terraform-provider-snowflake/util.GitSha=${SHA} -X github.com/chanzuckerberg/terraform-provider-snowflake/util.Version=${VERSION} -X github.com/chanzuckerberg/terraform-provider-snowflake/util.Dirty=${DIRTY}"
+export GOFLAGS=-mod=vendor
+export GO111MODULE=on
+>>>>>>> 706b523e0099dedd04664f5a6ac1ed92d6e7b51a
 
 all: test docs install
 .PHONY: all
 
 setup: ## setup development dependencies
+<<<<<<< HEAD
 	go get github.com/rakyll/gotest
 	go install github.com/rakyll/gotest
 	curl -L https://raw.githubusercontent.com/viostream/bff/master/download.sh | sh
+=======
+	curl -L https://raw.githubusercontent.com/chanzuckerberg/bff/master/download.sh | sh
+>>>>>>> 706b523e0099dedd04664f5a6ac1ed92d6e7b51a
 	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh
 .PHONY: setup
 
 lint: ## run the fast go linters
-	golangci-lint run
+	./bin/golangci-lint run
 .PHONY: lint
 
 release: ## run a release
@@ -45,13 +55,22 @@ coverage: ## run the go coverage tool, reading file coverage.out
 	go tool cover -html=coverage.txt
 .PHONY: coverage
 
-test: ## run the tests
-	${GOTEST} -race -coverprofile=coverage.txt -covermode=atomic ./...
+test: deps ## run the tests
+	go test -race -coverprofile=coverage.txt -covermode=atomic ./...
 .PHONY: test
 
-test-acceptance: ## runs all tests, including the acceptance tests which create and destroys real resources
-	TF_ACC=1 ${GOTEST} -v -race -coverprofile=coverage.txt -covermode=atomic $(TESTARGS) ./...
+test-acceptance: deps ## runs all tests, including the acceptance tests which create and destroys real resources
+	SKIP_WAREHOUSE_GRANT_TESTS=1 SKIP_SHARE_TESTS=1 SKIP_SHARE_TESTS=1 TF_ACC=1 go test -v -coverprofile=coverage.txt -covermode=atomic $(TESTARGS) ./...
 .PHONY: test-acceptance
+
+test-acceptance-ci: ## runs all tests, including the acceptance tests which create and destroys real resources
+	SKIP_WAREHOUSE_GRANT_TESTS=1 SKIP_SHARE_TESTS=1 SKIP_SHARE_TESTS=1 TF_ACC=1 go test -v -coverprofile=coverage.txt -covermode=atomic $(TESTARGS) ./...
+.PHONY: test-acceptance
+
+deps: 
+	go mod tidy
+	go mod vendor
+.PHONY: deps
 
 install: ## install the terraform-provider-snowflake binary in $GOPATH/bin
 	go install ${LDFLAGS} .

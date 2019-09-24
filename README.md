@@ -133,7 +133,7 @@ You can see a number of examples [here](examples).
 |---------------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-----------|----------|---------|
 | comment             | string | Specifies a comment for the schema.                                                                                                                                                                                                                    | true     | false     | false    | <nil>   |
 | data_retention_days | int    | Specifies the number of days for which Time Travel actions (CLONE and UNDROP) can be performed on the schema, as well as specifying the default Time Travel retention time for all tables created in the schema.                                       | true     | false     | false    |       1 |
-| database            | string | The database in which to create the view.                                                                                                                                                                                                              | false    | true      | false    | <nil>   |
+| database            | string | The database in which to create the schema.                                                                                                                                                                                                            | false    | true      | false    | <nil>   |
 | is_managed          | bool   | Specifies a managed schema. Managed access schemas centralize privilege management with the schema owner.                                                                                                                                              | true     | false     | false    | false   |
 | is_transient        | bool   | Specifies a schema as transient. Transient schemas do not have a Fail-safe period so they do not incur additional storage costs once they leave Time Travel; however, this means they are also not protected by Fail-safe in the event of a data loss. | true     | false     | false    | false   |
 | name                | string | Specifies the identifier for the schema; must be unique for the database in which the schema is created.                                                                                                                                               | false    | true      | false    | <nil>   |
@@ -159,6 +159,20 @@ You can see a number of examples [here](examples).
 | accounts | set    | A list of accounts to be added to the share.                                                          | true     | false     | false    | <nil>   |
 | comment  | string | Specifies a comment for the managed account.                                                          | true     | false     | false    | <nil>   |
 | name     | string | Specifies the identifier for the share; must be unique for the account in which the share is created. | false    | true      | false    | <nil>   |
+
+### snowflake_table_grant
+
+#### properties
+
+|     NAME      |  TYPE  |                                                                           DESCRIPTION                                                                           | OPTIONAL | REQUIRED  | COMPUTED | DEFAULT  |
+|---------------|--------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-----------|----------|----------|
+| database_name | string | The name of the database containing the current or future tables on which to grant privileges.                                                                  | false    | true      | false    | <nil>    |
+| on_future     | bool   | When this is set to true, apply this grant on all future tables in the given schema.  The table_name and shares fields must be unset in order to use on_future. | true     | false     | false    | false    |
+| privilege     | string | The privilege to grant on the current or future table.                                                                                                          | true     | false     | false    | "SELECT" |
+| roles         | set    | Grants privilege to these roles.                                                                                                                                | true     | false     | false    | <nil>    |
+| schema_name   | string | The name of the schema containing the current or future tables on which to grant privileges.                                                                    | true     | false     | false    | "PUBLIC" |
+| shares        | set    | Grants privilege to these shares (only valid if on_future is unset).                                                                                            | true     | false     | false    | <nil>    |
+| table_name    | string | The name of the table on which to grant privileges immediately (only valid if on_future is unset).                                                              | true     | false     | false    | <nil>    |
 
 ### snowflake_user
 
@@ -196,14 +210,15 @@ You can see a number of examples [here](examples).
 
 #### properties
 
-|     NAME      |  TYPE  |                                DESCRIPTION                                 | OPTIONAL | REQUIRED  | COMPUTED | DEFAULT  |
-|---------------|--------|----------------------------------------------------------------------------|----------|-----------|----------|----------|
-| database_name | string | The name of the database containing the view on which to grant privileges. | false    | true      | false    | <nil>    |
-| privilege     | string | The privilege to grant on the view.                                        | true     | false     | false    | "SELECT" |
-| roles         | set    | Grants privilege to these roles.                                           | true     | false     | false    | <nil>    |
-| schema_name   | string | The name of the schema containing the view on which to grant privileges.   | true     | false     | false    | "PUBLIC" |
-| shares        | set    | Grants privilege to these shares.                                          | true     | false     | false    | <nil>    |
-| view_name     | string | The name of the view on which to grant privileges.                         | false    | true      | false    | <nil>    |
+|     NAME      |  TYPE  |                                                                          DESCRIPTION                                                                          | OPTIONAL | REQUIRED  | COMPUTED | DEFAULT  |
+|---------------|--------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-----------|----------|----------|
+| database_name | string | The name of the database containing the current or future views on which to grant privileges.                                                                 | false    | true      | false    | <nil>    |
+| on_future     | bool   | When this is set to true, apply this grant on all future views in the given schema.  The view_name and shares fields must be unset in order to use on_future. | true     | false     | false    | false    |
+| privilege     | string | The privilege to grant on the current or future view.                                                                                                         | true     | false     | false    | "SELECT" |
+| roles         | set    | Grants privilege to these roles.                                                                                                                              | true     | false     | false    | <nil>    |
+| schema_name   | string | The name of the schema containing the current or future views on which to grant privileges.                                                                   | true     | false     | false    | "PUBLIC" |
+| shares        | set    | Grants privilege to these shares (only valid if on_future is unset).                                                                                          | true     | false     | false    | <nil>    |
+| view_name     | string | The name of the view on which to grant privileges immediately (only valid if on_future is unset).                                                             | true     | false     | false    | <nil>    |
 
 ### snowflake_warehouse
 
