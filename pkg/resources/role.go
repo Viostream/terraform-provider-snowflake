@@ -4,8 +4,13 @@ import (
 	"database/sql"
 	"fmt"
 
+<<<<<<< HEAD
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/viostream/terraform-provider-snowflake/pkg/snowflake"
+=======
+	"github.com/chanzuckerberg/terraform-provider-snowflake/pkg/snowflake"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+>>>>>>> 7dd55fa02ff8b69235d11375c3fb5f2028e5146b
 )
 
 var roleProperties = []string{"comment"}

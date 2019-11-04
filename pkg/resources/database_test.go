@@ -5,7 +5,14 @@ import (
 	"testing"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
+<<<<<<< HEAD
 	"github.com/hashicorp/terraform/helper/schema"
+=======
+	"github.com/chanzuckerberg/terraform-provider-snowflake/pkg/provider"
+	"github.com/chanzuckerberg/terraform-provider-snowflake/pkg/resources"
+	. "github.com/chanzuckerberg/terraform-provider-snowflake/pkg/testhelpers"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+>>>>>>> 7dd55fa02ff8b69235d11375c3fb5f2028e5146b
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/viostream/terraform-provider-snowflake/pkg/provider"
@@ -84,6 +91,24 @@ func TestDatabaseCreateFromShare(t *testing.T) {
 
 	WithMockDb(t, func(db *sql.DB, mock sqlmock.Sqlmock) {
 		mock.ExpectExec(`CREATE DATABASE "good_name" FROM SHARE "abc123"."my_share"`).WillReturnResult(sqlmock.NewResult(1, 1))
+		expectRead(mock)
+		err := resources.CreateDatabase(d, db)
+		a.NoError(err)
+	})
+}
+
+func TestDatabaseCreateFromDatabase(t *testing.T) {
+	a := assert.New(t)
+
+	in := map[string]interface{}{
+		"name": "good_name",
+		"from_database": "abc123",
+	}
+	d := schema.TestResourceDataRaw(t, resources.Database().Schema, in)
+	a.NotNil(d)
+
+	WithMockDb(t, func(db *sql.DB, mock sqlmock.Sqlmock) {
+		mock.ExpectExec(`CREATE DATABASE "good_name" CLONE "abc123"`).WillReturnResult(sqlmock.NewResult(1, 1))
 		expectRead(mock)
 		err := resources.CreateDatabase(d, db)
 		a.NoError(err)

@@ -1,16 +1,21 @@
 package resources
 
 import (
+	"bytes"
 	"database/sql"
+	"encoding/csv"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/jmoiron/sqlx"
 
 	"github.com/viostream/terraform-provider-snowflake/pkg/snowflake"
+)
+
+const (
+	grantIDDelimiter = '|'
 )
 
 // currentGrant represents a generic grant of a privilege from a grant (the target) to a
@@ -51,15 +56,126 @@ type grant struct {
 	GrantOption bool
 }
 
-// splitGrantID takes the <db_name>|<schema_name>|<view_name>|<privilege> ID and
-// returns the object name and privilege.
-func splitGrantID(v string) (string, string, string, string, error) {
-	arr := strings.Split(v, "|")
-	if len(arr) != 4 {
-		return "", "", "", "", fmt.Errorf("ID %v is invalid", v)
+// grantID contains identifying elements that allow unique access privileges
+type grantID struct {
+	ResourceName string
+	SchemaName   string
+	ViewOrTable  string
+	Privilege    string
+}
+
+type privilegeSet map[string]struct{}
+
+func (ss privilegeSet) add(s string) {
+	ss[s] = struct{}{}
+}
+
+func (ss privilegeSet) ALLPrivsPresent(validPrivs []string) bool {
+	for _, p := range validPrivs {
+		if p == "ALL" || p == "OWNERSHIP" || p == "CREATE STREAM" {
+			continue
+		}
+		if _, ok := ss[p]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+// Because none of the grants currently have a privilege of "ALL", rather they explicitly say
+// each privilege for each database_schema pair, we want to collapse them into one grant that has
+// the privilege of "ALL". filterAllGrants allows us to filter the grants and reassign their privilege
+// to "ALL".
+func filterALLGrants(grantList []*grant, validPrivs []string) []*grant {
+	// For each database_schema_role, figure out if the grant has all of the privileges
+	type databaseSchemaRole struct {
+		GrantName   string
+		GranteeType string
+		GranteeName string
+	}
+	groupedByRole := map[databaseSchemaRole]privilegeSet{}
+	for _, g := range grantList {
+		id := databaseSchemaRole{
+			GrantName:   g.GrantName,
+			GranteeType: g.GranteeType,
+			GranteeName: g.GranteeName,
+		}
+		if _, ok := groupedByRole[id]; !ok {
+			groupedByRole[id] = map[string]struct{}{}
+		}
+		groupedByRole[id][g.Privilege] = struct{}{}
+	}
+	for databaseSchemaRole, privs := range groupedByRole {
+		if !privs.ALLPrivsPresent(validPrivs) {
+			delete(groupedByRole, databaseSchemaRole)
+		}
+	}
+	filteredGrants := []*grant{}
+
+	// Roles with the "ALL" privilege
+	for databaseSchemaRole := range groupedByRole {
+		filteredGrants = append(filteredGrants, &grant{
+			GrantName:   databaseSchemaRole.GrantName,
+			Privilege:   "ALL",
+			GranteeType: databaseSchemaRole.GranteeType,
+			GranteeName: databaseSchemaRole.GranteeName,
+		})
 	}
 
-	return arr[0], arr[1], arr[2], arr[3], nil
+	for _, g := range grantList {
+		id := databaseSchemaRole{
+			GrantName:   g.GrantName,
+			GranteeType: g.GranteeType,
+			GranteeName: g.GranteeName,
+		}
+		// Already added it with the "ALL" privilege, so skip
+		if _, ok := groupedByRole[id]; ok {
+			continue
+		}
+		filteredGrants = append(filteredGrants, g)
+	}
+	return filteredGrants
+}
+
+// String() takes in a grantID object and returns a pipe-delimited string:
+// resourceName|schemaName|ViewOrTable|Privilege
+func (gi *grantID) String() (string, error) {
+	var buf bytes.Buffer
+	csvWriter := csv.NewWriter(&buf)
+	csvWriter.Comma = grantIDDelimiter
+	dataIdentifiers := [][]string{{gi.ResourceName, gi.SchemaName, gi.ViewOrTable, gi.Privilege}}
+	err := csvWriter.WriteAll(dataIdentifiers)
+	if err != nil {
+		return "", err
+	}
+	strGrantID := strings.TrimSpace(buf.String())
+	return strGrantID, nil
+}
+
+// grantIDFromString() takes in a pipe-delimited string: resourceName|schemaName|ViewOrTable|Privilege
+// and returns a grantID object
+func grantIDFromString(stringID string) (*grantID, error) {
+	reader := csv.NewReader(strings.NewReader(stringID))
+	reader.Comma = grantIDDelimiter
+	lines, err := reader.ReadAll()
+	if err != nil {
+		return nil, fmt.Errorf("Not CSV compatible")
+	}
+
+	if len(lines) != 1 {
+		return nil, fmt.Errorf("1 line per grant")
+	}
+	if len(lines[0]) != 4 {
+		return nil, fmt.Errorf("4 fields allowed")
+	}
+
+	grantResult := &grantID{
+		ResourceName: lines[0][0],
+		SchemaName:   lines[0][1],
+		ViewOrTable:  lines[0][2],
+		Privilege:    lines[0][3],
+	}
+	return grantResult, nil
 }
 
 func createGenericGrant(data *schema.ResourceData, meta interface{}, builder snowflake.GrantBuilder) error {
@@ -90,11 +206,7 @@ func createGenericGrant(data *schema.ResourceData, meta interface{}, builder sno
 	return nil
 }
 
-func d(in interface{}) {
-	log.Printf("[DEBUG]%#v\n", in)
-}
-
-func readGenericGrant(data *schema.ResourceData, meta interface{}, builder snowflake.GrantBuilder, futureObjects bool) error {
+func readGenericGrant(data *schema.ResourceData, meta interface{}, builder snowflake.GrantBuilder, futureObjects bool, validPrivileges []string) error {
 	db := meta.(*sql.DB)
 	var grants []*grant
 	var err error
@@ -108,32 +220,52 @@ func readGenericGrant(data *schema.ResourceData, meta interface{}, builder snowf
 	}
 	priv := data.Get("privilege").(string)
 
-	rolesIn, sharesIn := expandRolesAndShares(data)
+	if priv == "ALL" {
+		grants = filterALLGrants(grants, validPrivileges)
+	}
 
-	var roles, shares []string
-	d("foo")
+	// Map of roles to privileges
+	rolePrivileges := map[string]privilegeSet{}
+	sharePrivileges := map[string]privilegeSet{}
+
+	// List of all grants for each schema_database
 	for _, grant := range grants {
-		// Skip if wrong privilege
-		if grant.Privilege != priv {
-			continue
-		}
-		d(grant)
 		switch grant.GranteeType {
 		case "ROLE":
-			if !stringInSlice(grant.GranteeName, rolesIn) {
-				continue
+			roleName := grant.GranteeName
+			// Find set of privileges
+			privileges, ok := rolePrivileges[roleName]
+			if !ok {
+				// If not there, create an empty set
+				privileges = privilegeSet{}
 			}
-			roles = append(roles, grant.GranteeName)
+			// Add privilege to the set
+			privileges.add(grant.Privilege)
+			// Reassign set back
+			rolePrivileges[roleName] = privileges
 		case "SHARE":
-			// Shares get the account appended to their name, remove this
 			granteeNameStrippedAccount := StripAccountFromName(grant.GranteeName)
-			if !stringInSlice(granteeNameStrippedAccount, sharesIn) {
-				continue
+			// Find set of privileges
+			privileges, ok := sharePrivileges[granteeNameStrippedAccount]
+			if !ok {
+				// If not there, create an empty set
+				privileges = privilegeSet{}
 			}
-
-			shares = append(shares, grant.GranteeName)
+			// Add privilege to the set
+			privileges.add(grant.Privilege)
+			// Reassign set back
+			sharePrivileges[granteeNameStrippedAccount] = privileges
 		default:
 			return fmt.Errorf("unknown grantee type %s", grant.GranteeType)
+		}
+	}
+
+	var roles, shares []string
+	// Now see which roles have our privilege
+	for roleName, privileges := range rolePrivileges {
+		// Where priv is not all so it should match exactly
+		if _, ok := privileges[priv]; ok || privileges.ALLPrivsPresent(validPrivileges) {
+			roles = append(roles, roleName)
 		}
 	}
 
@@ -141,12 +273,10 @@ func readGenericGrant(data *schema.ResourceData, meta interface{}, builder snowf
 	if err != nil {
 		return err
 	}
-
 	err = data.Set("roles", roles)
 	if err != nil {
 		return err
 	}
-
 	err = data.Set("shares", shares)
 	if err != nil {
 		// warehouses and future grants don't use shares - check for this error
@@ -154,7 +284,6 @@ func readGenericGrant(data *schema.ResourceData, meta interface{}, builder snowf
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -176,10 +305,10 @@ func readGenericCurrentGrants(db *sql.DB, builder snowflake.GrantBuilder) ([]*gr
 			return nil, err
 		}
 		grant := &grant{
-			CreatedOn: currentGrant.CreatedOn,
-			Privilege: currentGrant.Privilege,
-			GrantType: currentGrant.GrantType,
-			GrantName: currentGrant.GrantName,
+			CreatedOn:   currentGrant.CreatedOn,
+			Privilege:   currentGrant.Privilege,
+			GrantType:   currentGrant.GrantType,
+			GrantName:   currentGrant.GrantName,
 			GranteeType: currentGrant.GranteeType,
 			GranteeName: currentGrant.GranteeName,
 			GrantOption: currentGrant.GrantOption,
@@ -264,13 +393,4 @@ func expandRolesAndShares(data *schema.ResourceData) ([]string, []string) {
 		shares = expandStringList(data.Get("shares").(*schema.Set).List())
 	}
 	return roles, shares
-}
-
-func stringInSlice(v string, sl []string) bool {
-	for _, s := range sl {
-		if s == v {
-			return true
-		}
-	}
-	return false
 }

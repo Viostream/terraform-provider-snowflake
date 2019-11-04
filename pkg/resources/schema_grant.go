@@ -1,19 +1,19 @@
 package resources
 
 import (
-	"fmt"
-
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 
 	"github.com/viostream/terraform-provider-snowflake/pkg/snowflake"
 )
 
 // Intentionally exclude the "ALL" alias because it is not a real privilege and
 // might not interact well with this provider.
-var validSchemaPrivileges = []string{
+var ValidSchemaPrivileges = []string{
+	"ALL",
 	"MODIFY",
 	"MONITOR",
+	"OWNERSHIP",
 	"USAGE",
 	"CREATE TABLE",
 	"CREATE VIEW",
@@ -43,9 +43,9 @@ var schemaGrantSchema = map[string]*schema.Schema{
 	"privilege": &schema.Schema{
 		Type:         schema.TypeString,
 		Optional:     true,
-		Description:  "The privilege to grant on the schema.",
+		Description:  "The privilege to grant on the schema.  Note that if \"OWNERSHIP\" is specified, ensure that the role that terraform is using is granted access.",
 		Default:      "USAGE",
-		ValidateFunc: validation.StringInSlice(validSchemaPrivileges, true),
+		ValidateFunc: validation.StringInSlice(ValidSchemaPrivileges, true),
 		ForceNew:     true,
 	},
 	"roles": &schema.Schema{
@@ -90,44 +90,52 @@ func CreateSchemaGrant(data *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	// ID format is <db_name>|<schema_name>||<privilege>
-	data.SetId(fmt.Sprintf("%v|%v||%v", db, schema, priv))
+	grantID := &grantID{
+		ResourceName: db,
+		SchemaName:   schema,
+		Privilege:    priv,
+	}
+	dataIDInput, err := grantID.String()
+	if err != nil {
+		return err
+	}
+	data.SetId(dataIDInput)
 
 	return ReadSchemaGrant(data, meta)
 }
 
 // ReadSchemaGrant implements schema.ReadFunc
 func ReadSchemaGrant(data *schema.ResourceData, meta interface{}) error {
-	db, schema, _, priv, err := splitGrantID(data.Id())
+	grantID, err := grantIDFromString(data.Id())
 	if err != nil {
 		return err
 	}
-	err = data.Set("database_name", db)
+	err = data.Set("database_name", grantID.ResourceName)
 	if err != nil {
 		return err
 	}
-	err = data.Set("schema_name", schema)
+	err = data.Set("schema_name", grantID.SchemaName)
 	if err != nil {
 		return err
 	}
-	err = data.Set("privilege", priv)
+	err = data.Set("privilege", grantID.Privilege)
 	if err != nil {
 		return err
 	}
 
-	builder := snowflake.SchemaGrant(db, schema)
+	builder := snowflake.SchemaGrant(grantID.ResourceName, grantID.SchemaName)
 
-	return readGenericGrant(data, meta, builder, false)
+	return readGenericGrant(data, meta, builder, false, ValidSchemaPrivileges)
 }
 
 // DeleteSchemaGrant implements schema.DeleteFunc
 func DeleteSchemaGrant(data *schema.ResourceData, meta interface{}) error {
-	db, schema, _, _, err := splitGrantID(data.Id())
+	grantID, err := grantIDFromString(data.Id())
 	if err != nil {
 		return err
 	}
 
-	builder := snowflake.SchemaGrant(db, schema)
+	builder := snowflake.SchemaGrant(grantID.ResourceName, grantID.SchemaName)
 
 	return deleteGenericGrant(data, meta, builder)
 }

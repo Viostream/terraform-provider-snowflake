@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
+<<<<<<< HEAD
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -12,6 +13,14 @@ import (
 	"github.com/viostream/terraform-provider-snowflake/pkg/provider"
 	"github.com/viostream/terraform-provider-snowflake/pkg/resources"
 	. "github.com/viostream/terraform-provider-snowflake/pkg/testhelpers"
+=======
+	"github.com/chanzuckerberg/terraform-provider-snowflake/pkg/provider"
+	"github.com/chanzuckerberg/terraform-provider-snowflake/pkg/resources"
+	. "github.com/chanzuckerberg/terraform-provider-snowflake/pkg/testhelpers"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+>>>>>>> 7dd55fa02ff8b69235d11375c3fb5f2028e5146b
 )
 
 func TestSchema(t *testing.T) {

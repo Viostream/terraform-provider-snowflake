@@ -4,8 +4,13 @@ import (
 	"database/sql"
 	"strings"
 
+<<<<<<< HEAD
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/viostream/terraform-provider-snowflake/pkg/snowflake"
+=======
+	"github.com/chanzuckerberg/terraform-provider-snowflake/pkg/snowflake"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+>>>>>>> 7dd55fa02ff8b69235d11375c3fb5f2028e5146b
 )
 
 var userProperties = []string{
@@ -22,7 +27,7 @@ var userProperties = []string{
 }
 
 var diffCaseInsensitive = func(k, old, new string, d *schema.ResourceData) bool {
-	return strings.ToUpper(old) == strings.ToUpper(new)
+	return strings.EqualFold(old, new)
 }
 
 var userSchema = map[string]*schema.Schema{

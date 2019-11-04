@@ -6,8 +6,14 @@ import (
 	"strings"
 	"time"
 
+<<<<<<< HEAD
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/helper/validation"
+=======
+	"github.com/chanzuckerberg/terraform-provider-snowflake/pkg/snowflake"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+>>>>>>> 7dd55fa02ff8b69235d11375c3fb5f2028e5146b
 	"github.com/jmoiron/sqlx"
 	"github.com/viostream/terraform-provider-snowflake/pkg/snowflake"
 )

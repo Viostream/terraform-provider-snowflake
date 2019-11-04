@@ -1,15 +1,13 @@
 package resources
 
 import (
-	"fmt"
-
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 
 	"github.com/viostream/terraform-provider-snowflake/pkg/snowflake"
 )
 
-var validWarehousePrivileges = []string{
+var ValidWarehousePrivileges = []string{
 	"ALL", "MODIFY", "MONITOR", "OPERATE", "OWNERSHIP", "USAGE",
 }
 
@@ -25,7 +23,7 @@ var warehouseGrantSchema = map[string]*schema.Schema{
 		Optional:     true,
 		Description:  "The privilege to grant on the warehouse.",
 		Default:      "USAGE",
-		ValidateFunc: validation.StringInSlice(validWarehousePrivileges, true),
+		ValidateFunc: validation.StringInSlice(ValidWarehousePrivileges, true),
 		ForceNew:     true,
 	},
 	"roles": &schema.Schema{
@@ -63,18 +61,28 @@ func CreateWarehouseGrant(data *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	// ID format is <warehouse_name>|||<privilege>
-	data.SetId(fmt.Sprintf("%v|||%v", w, priv))
+	grant := &grantID{
+		ResourceName: w,
+		Privilege:    priv,
+	}
+	dataIDInput, err := grant.String()
+	if err != nil {
+		return err
+	}
+	data.SetId(dataIDInput)
 
 	return ReadWarehouseGrant(data, meta)
 }
 
 // ReadWarehouseGrant implements schema.ReadFunc
 func ReadWarehouseGrant(data *schema.ResourceData, meta interface{}) error {
-	w, _, _, priv, err := splitGrantID(data.Id())
+	grantID, err := grantIDFromString(data.Id())
 	if err != nil {
 		return err
 	}
+	w := grantID.ResourceName
+	priv := grantID.Privilege
+
 	err = data.Set("warehouse_name", w)
 	if err != nil {
 		return err
@@ -86,15 +94,16 @@ func ReadWarehouseGrant(data *schema.ResourceData, meta interface{}) error {
 
 	builder := snowflake.WarehouseGrant(w)
 
-	return readGenericGrant(data, meta, builder, false)
+	return readGenericGrant(data, meta, builder, false, ValidWarehousePrivileges)
 }
 
 // DeleteWarehouseGrant implements schema.DeleteFunc
 func DeleteWarehouseGrant(data *schema.ResourceData, meta interface{}) error {
-	w, _, _, _, err := splitGrantID(data.Id())
+	grantID, err := grantIDFromString(data.Id())
 	if err != nil {
 		return err
 	}
+	w := grantID.ResourceName
 
 	builder := snowflake.WarehouseGrant(w)
 

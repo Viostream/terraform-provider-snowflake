@@ -3,7 +3,7 @@ before:
     - make clean
 
 builds:
-  - binary: terraform-provider-snowflake
+  - binary: terraform-provider-snowflake_{{ .Tag }}
     env:
       - CGO_ENABLED=0
     goos:
@@ -12,7 +12,11 @@ builds:
     goarch:
       - amd64
     ldflags:
+<<<<<<< HEAD
       - "-w -s -X github.com/viostream/terraform-provider-snowflake/util.GitSha={{.Commit}} -X github.com/viostream/terraform-provider-snowflake/util.Version={{.Version}} -X github.com/viostream/terraform-provider-snowflake/util.Dirty=false -X github.com/viostream/terraform-provider-snowflake/util.Release=true"
+=======
+      - "-w -s -X github.com/chanzuckerberg/terraform-provider-snowflake/pkg/version.GitSha={{.Commit}} -X github.com/chanzuckerberg/terraform-provider-snowflake/pkg/version.Version={{.Version}} -X github.com/chanzuckerberg/terraform-provider-snowflake/pkg/version.Dirty={{.Env.DIRTY}}"
+>>>>>>> 7dd55fa02ff8b69235d11375c3fb5f2028e5146b
 
 archive:
   files:
@@ -20,3 +24,9 @@ archive:
 
 release:
   prerelease: true
+<<<<<<< HEAD
+=======
+
+env_files:
+  github_token: ~/.config/goreleaser/github_token
+>>>>>>> 7dd55fa02ff8b69235d11375c3fb5f2028e5146b

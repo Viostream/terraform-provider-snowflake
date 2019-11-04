@@ -3,7 +3,12 @@ package provider_test
 import (
 	"testing"
 
+<<<<<<< HEAD
 	"github.com/hashicorp/terraform/helper/schema"
+=======
+	"github.com/chanzuckerberg/terraform-provider-snowflake/pkg/provider"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+>>>>>>> 7dd55fa02ff8b69235d11375c3fb5f2028e5146b
 	_ "github.com/snowflakedb/gosnowflake"
 	"github.com/stretchr/testify/assert"
 	"github.com/viostream/terraform-provider-snowflake/pkg/provider"
@@ -30,9 +35,15 @@ func TestDSN(t *testing.T) {
 		wantErr bool
 	}{
 		{"simple", args{resourceData(t, "acct", "user", "pass", "region", "role")},
+<<<<<<< HEAD
 			"user:pass@acct.region.snowflakecomputing.com:443?region=region&role=role", false},
 		{"default region", args{resourceData(t, "acct2", "user2", "pass2", "", "role2")},
 			"user2:pass2@acct2.snowflakecomputing.com:443?role=role2", false},
+=======
+			"user:pass@acct.region.snowflakecomputing.com:443?ocspFailOpen=true&region=region&role=role&validateDefaultParameters=true", false},
+		{"us-west-2 special case", args{resourceData(t, "acct2", "user2", "pass2", "us-west-2", "role2")},
+			"user2:pass2@acct2.snowflakecomputing.com:443?ocspFailOpen=true&role=role2&validateDefaultParameters=true", false},
+>>>>>>> 7dd55fa02ff8b69235d11375c3fb5f2028e5146b
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

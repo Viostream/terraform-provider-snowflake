@@ -5,8 +5,15 @@ import (
 	"path/filepath"
 	"testing"
 
+<<<<<<< HEAD
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
+=======
+	"github.com/chanzuckerberg/terraform-provider-snowflake/pkg/provider"
+	"github.com/chanzuckerberg/terraform-provider-snowflake/pkg/resources"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+>>>>>>> 7dd55fa02ff8b69235d11375c3fb5f2028e5146b
 	"github.com/stretchr/testify/assert"
 	"github.com/viostream/terraform-provider-snowflake/pkg/provider"
 	"github.com/viostream/terraform-provider-snowflake/pkg/resources"
