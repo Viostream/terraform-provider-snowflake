@@ -21,18 +21,32 @@ all: test docs install
 
 setup: ## setup development dependencies
 <<<<<<< HEAD
+<<<<<<< HEAD
 	go get github.com/rakyll/gotest
 	go install github.com/rakyll/gotest
 	curl -L https://raw.githubusercontent.com/viostream/bff/master/download.sh | sh
 =======
 	curl -L https://raw.githubusercontent.com/chanzuckerberg/bff/master/download.sh | sh
 >>>>>>> 706b523e0099dedd04664f5a6ac1ed92d6e7b51a
+=======
+	curl -sfL https://raw.githubusercontent.com/chanzuckerberg/bff/master/download.sh | sh
+>>>>>>> 4346dee4430764fa7c608a761b5ffd3c53650631
 	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh
+	curl -sfL https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh| sh
 .PHONY: setup
 
 lint: ## run the fast go linters
-	./bin/golangci-lint run --timeout=3m
+	./bin/reviewdog -conf .reviewdog.yml  -diff "git diff master"
 .PHONY: lint
+
+lint-ci: ## run the fast go linters
+	./bin/reviewdog -conf .reviewdog.yml  -reporter=github-pr-review
+.PHONY: lint-ci
+
+lint-all: ## run the fast go linters
+	# doesn't seem to be a way to get reviewdog to not filter by diff
+	./bin/golangci-lint run
+.PHONY: lint-all
 
 release: ## run a release
 	./bin/bff bump

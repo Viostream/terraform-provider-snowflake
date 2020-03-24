@@ -4,13 +4,8 @@ import (
 	"database/sql"
 	"strings"
 
-<<<<<<< HEAD
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/viostream/terraform-provider-snowflake/pkg/snowflake"
-=======
 	"github.com/chanzuckerberg/terraform-provider-snowflake/pkg/snowflake"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
->>>>>>> 7dd55fa02ff8b69235d11375c3fb5f2028e5146b
 )
 
 var userProperties = []string{
@@ -24,6 +19,10 @@ var userProperties = []string{
 	"rsa_public_key",
 	"rsa_public_key_2",
 	"must_change_password",
+	"email",
+	"display_name",
+	"first_name",
+	"last_name",
 }
 
 var diffCaseInsensitive = func(k, old, new string, d *schema.ResourceData) bool {
@@ -96,6 +95,26 @@ var userSchema = map[string]*schema.Schema{
 		Type:        schema.TypeBool,
 		Optional:    true,
 		Description: "Specifies whether the user is forced to change their password on next login (including their first/initial login) into the system.",
+	},
+	"email": &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "Email address for the user.",
+	},
+	"display_name": &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "Name displayed for the user in the Snowflake web interface.",
+	},
+	"first_name": &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "First name of the user.",
+	},
+	"last_name": &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "Last name of the user.",
 	},
 
 	//    DISPLAY_NAME = <string>
@@ -177,6 +196,26 @@ func ReadUser(data *schema.ResourceData, meta interface{}) error {
 	}
 
 	err = data.Set("login_name", loginName.String)
+	if err != nil {
+		return err
+	}
+
+	err = data.Set("display_name", displayName.String)
+	if err != nil {
+		return err
+	}
+
+	err = data.Set("first_name", firstName.String)
+	if err != nil {
+		return err
+	}
+
+	err = data.Set("last_name", lastName.String)
+	if err != nil {
+		return err
+	}
+
+	err = data.Set("email", email.String)
 	if err != nil {
 		return err
 	}

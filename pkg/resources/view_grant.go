@@ -8,9 +8,9 @@ import (
 	"github.com/viostream/terraform-provider-snowflake/pkg/snowflake"
 )
 
-var ValidViewPrivileges = []string{
-	"SELECT",
-}
+var ValidViewPrivileges = newPrivilegeSet(
+	privilegeSelect,
+)
 
 var viewGrantSchema = map[string]*schema.Schema{
 	"view_name": &schema.Schema{
@@ -37,7 +37,7 @@ var viewGrantSchema = map[string]*schema.Schema{
 		Optional:     true,
 		Description:  "The privilege to grant on the current or future view.",
 		Default:      "SELECT",
-		ValidateFunc: validation.StringInSlice(ValidViewPrivileges, true),
+		ValidateFunc: validation.StringInSlice(ValidViewPrivileges.toList(), true),
 		ForceNew:     true,
 	},
 	"roles": &schema.Schema{
@@ -113,7 +113,7 @@ func CreateViewGrant(data *schema.ResourceData, meta interface{}) error {
 	grant := &grantID{
 		ResourceName: dbName,
 		SchemaName:   schemaName,
-		ViewOrTable:  viewName,
+		ObjectName:   viewName,
 		Privilege:    priv,
 	}
 	dataIDInput, err := grant.String()
@@ -133,7 +133,7 @@ func ReadViewGrant(data *schema.ResourceData, meta interface{}) error {
 	}
 	dbName := grantID.ResourceName
 	schemaName := grantID.SchemaName
-	viewName := grantID.ViewOrTable
+	viewName := grantID.ObjectName
 	priv := grantID.Privilege
 
 	err = data.Set("database_name", dbName)
@@ -164,11 +164,11 @@ func ReadViewGrant(data *schema.ResourceData, meta interface{}) error {
 	var builder snowflake.GrantBuilder
 	if futureViewsEnabled {
 		builder = snowflake.FutureViewGrant(dbName, schemaName)
-		return readGenericGrant(data, meta, builder, true, ValidViewPrivileges)
 	} else {
 		builder = snowflake.ViewGrant(dbName, schemaName, viewName)
-		return readGenericGrant(data, meta, builder, false, ValidViewPrivileges)
 	}
+
+	return readGenericGrant(data, meta, builder, futureViewsEnabled, ValidViewPrivileges)
 }
 
 // DeleteViewGrant implements schema.DeleteFunc
@@ -179,12 +179,9 @@ func DeleteViewGrant(data *schema.ResourceData, meta interface{}) error {
 	}
 	dbName := grantID.ResourceName
 	schemaName := grantID.SchemaName
-	viewName := grantID.ViewOrTable
+	viewName := grantID.ObjectName
 
-	futureViews := false
-	if viewName == "" {
-		futureViews = true
-	}
+	futureViews := (viewName == "")
 
 	var builder snowflake.GrantBuilder
 	if futureViews {

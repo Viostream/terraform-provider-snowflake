@@ -2,6 +2,7 @@ package resources_test
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
@@ -9,6 +10,10 @@ import (
 )
 
 func TestAccWarehouse(t *testing.T) {
+	if _, ok := os.LookupEnv("SKIP_WAREHOUSE_TESTS"); ok {
+		t.Skip("Skipping TestAccWarehouse")
+	}
+
 	prefix := acctest.RandStringFromCharSet(10, acctest.CharSetAlpha)
 	prefix2 := acctest.RandStringFromCharSet(10, acctest.CharSetAlpha)
 
@@ -49,7 +54,7 @@ func TestAccWarehouse(t *testing.T) {
 				ResourceName:            "snowflake_warehouse.w",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"initially_suspended", "wait_for_provisioning"},
+				ImportStateVerifyIgnore: []string{"initially_suspended", "wait_for_provisioning", "statement_timeout_in_seconds"},
 			},
 		},
 	})

@@ -53,7 +53,7 @@ type warehouse struct {
 }
 
 // warehouseCreateProperties are only available via the CREATE statement
-var warehouseCreateProperties = []string{"initially_suspended", "wait_for_provisioning"}
+var warehouseCreateProperties = []string{"initially_suspended", "wait_for_provisioning", "statement_timeout_in_seconds"}
 
 var warehouseProperties = []string{
 	"comment", "warehouse_size", "max_cluster_count", "min_cluster_count",
@@ -137,6 +137,13 @@ var warehouseSchema = map[string]*schema.Schema{
 		Type:        schema.TypeBool,
 		Description: "Specifies whether the warehouse, after being resized, waits for all the servers to provision before executing any queued or new queries.",
 		Optional:    true,
+	},
+	"statement_timeout_in_seconds": &schema.Schema{
+		Type:        schema.TypeInt,
+		Optional:    true,
+		Default:     0,
+		ForceNew:    false,
+		Description: "Specifies the time, in seconds, after which a running SQL statement (query, DDL, DML, etc.) is canceled by the system",
 	},
 }
 
