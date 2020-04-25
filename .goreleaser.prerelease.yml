@@ -18,9 +18,9 @@ builds:
       - "-w -s -X github.com/chanzuckerberg/terraform-provider-snowflake/pkg/version.GitSha={{.Commit}} -X github.com/chanzuckerberg/terraform-provider-snowflake/pkg/version.Version={{.Version}} -X github.com/chanzuckerberg/terraform-provider-snowflake/pkg/version.Dirty={{.Env.DIRTY}}"
 >>>>>>> 7dd55fa02ff8b69235d11375c3fb5f2028e5146b
 
-archive:
-  files:
-  - none*
+archives:
+  - files:
+    - none*
 
 release:
   prerelease: true
