@@ -12,6 +12,7 @@ type EntityType string
 
 const (
 	DatabaseType           EntityType = "DATABASE"
+	FileFormatType         EntityType = "FILE FORMAT"
 	ManagedAccountType     EntityType = "MANAGED ACCOUNT"
 	ResourceMonitorType    EntityType = "RESOURCE MONITOR"
 	RoleType               EntityType = "ROLE"
